@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/fluent/fluent-logger-golang/fluent"
@@ -28,7 +26,6 @@ type options struct {
 	tagPrefix          string
 	async              bool
 	forceStopAsyncSend bool
-	skip               int
 }
 
 // Timeout with config Timeout.
@@ -103,9 +100,9 @@ type Logger struct {
 // NewLogger new a std logger with options.
 // target:
 //   tcp://127.0.0.1:24224
-//   unix:///var/run/fluent/fluent.sock
+//   unix://var/run/fluent/fluent.sock
 func NewLogger(addr string, opts ...Option) (*Logger, error) {
-	options := options{skip: 4}
+	options := options{}
 	for _, o := range opts {
 		o(&options)
 	}
@@ -151,38 +148,25 @@ func NewLogger(addr string, opts ...Option) (*Logger, error) {
 	}, nil
 }
 
-func (l *Logger) stackTrace(path string) string {
-	idx := strings.LastIndexByte(path, '/')
-	if idx == -1 {
-		return path
+// Log print the kv pairs log.
+func (l *Logger) Log(level log.Level, keyvals ...interface{}) error {
+	if len(keyvals) == 0 {
+		return nil
 	}
-	idx = strings.LastIndexByte(path[:idx], '/')
-	if idx == -1 {
-		return path
-	}
-	return path[idx+1:]
-}
-
-// Print print the kv pairs log.
-func (l *Logger) Print(kvpair ...interface{}) {
-	if len(kvpair) == 0 {
-		return
-	}
-	if len(kvpair)%2 != 0 {
-		kvpair = append(kvpair, "")
+	if len(keyvals)%2 != 0 {
+		keyvals = append(keyvals, "KEYVALS UNPAIRED")
 	}
 
-	data := make(map[string]string, len(kvpair)/2+1)
-	if _, file, line, ok := runtime.Caller(l.opts.skip); ok {
-		data[l.stackTrace(file)] = strconv.Itoa(line)
-	}
-	for i := 0; i < len(kvpair); i += 2 {
-		data[fmt.Sprint(kvpair[i])] = fmt.Sprint(kvpair[i+1])
+	data := make(map[string]string, len(keyvals)/2+1)
+
+	for i := 0; i < len(keyvals); i += 2 {
+		data[fmt.Sprint(keyvals[i])] = fmt.Sprint(keyvals[i+1])
 	}
 
-	if err := l.log.Post(data["module"], data); err != nil {
+	if err := l.log.Post(level.String(), data); err != nil {
 		println(err)
 	}
+	return nil
 }
 
 // Close close the logger.
