@@ -35,23 +35,25 @@ func TestLogger(t *testing.T) {
 		t.Error(err)
 	}
 	defer logger.Close()
+	flog := log.NewHelper(logger)
 
-	log.Debug(logger).Print("log", "test")
-	log.Info(logger).Print("log", "test")
-	log.Warn(logger).Print("log", "test")
-	log.Error(logger).Print("log", "test")
+	flog.Debug("log", "test")
+	flog.Info("log", "test")
+	flog.Warn("log", "test")
+	flog.Error("log", "test")
 }
 
 func BenchmarkLoggerPrint(b *testing.B) {
 	b.SetParallelism(100)
 	logger, err := NewLogger("tcp://127.0.0.1:24224")
+	flog := log.NewHelper(logger)
 	if err != nil {
 		b.Error(err)
 	}
 	defer logger.Close()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			logger.Print("log", "test")
+			flog.Info("log", "test")
 		}
 	})
 }
@@ -62,10 +64,10 @@ func BenchmarkLoggerHelperV(b *testing.B) {
 	if err != nil {
 		b.Error(err)
 	}
-	h := log.NewHelper("test", logger)
+	h := log.NewHelper(logger)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			h.V(10).Print("log", "test")
+			h.Info("log", "test")
 		}
 	})
 }
@@ -77,7 +79,7 @@ func BenchmarkLoggerHelperInfo(b *testing.B) {
 		b.Error(err)
 	}
 	defer logger.Close()
-	h := log.NewHelper("test", logger)
+	h := log.NewHelper(logger)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			h.Info("test")
@@ -92,7 +94,7 @@ func BenchmarkLoggerHelperInfof(b *testing.B) {
 		b.Error(err)
 	}
 	defer logger.Close()
-	h := log.NewHelper("test", logger)
+	h := log.NewHelper(logger)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			h.Infof("log %s", "test")
@@ -107,7 +109,7 @@ func BenchmarkLoggerHelperInfow(b *testing.B) {
 		b.Error(err)
 	}
 	defer logger.Close()
-	h := log.NewHelper("test", logger)
+	h := log.NewHelper(logger)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			h.Infow("log", "test")
